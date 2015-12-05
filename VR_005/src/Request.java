@@ -36,9 +36,7 @@ public class Request extends Message {
 
 	@Override
 	public String toString() {
-		return "Message Type = REQUEST\nOperation = " + operation
-				+ "\nClient ID = " + clientId + "\nRequest Number = "
-				+ Integer.toString(number)+"\n"+
-				"Executed = "+executed;
+		return "Message Type = REQUEST\nOperation = " + operation + "\nClient ID = " + clientId + "\nRequest Number = "
+				+ Integer.toString(number) + "\n" + "Executed = " + executed;
 	}
 }

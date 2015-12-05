@@ -7,8 +7,7 @@ public class Prepare extends Message {
 	private int opNumber;
 	private int commitNumber;
 
-	public Prepare(TypeMessage typemsg, int viewNumber, Request request,
-			int opNumber, int commitNumber) {
+	public Prepare(TypeMessage typemsg, int viewNumber, Request request, int opNumber, int commitNumber) {
 		super(typemsg);
 		this.viewNumber = viewNumber;
 		this.request = request;

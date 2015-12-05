@@ -8,7 +8,7 @@ import java.util.List;
 public class UserCode {
 
 	private List<String> configuration;
-	private String id;
+	private String clientId;
 	private int requestNumber;
 	private SendAndReceive sr;
 
@@ -20,15 +20,14 @@ public class UserCode {
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
-		
+
 		if (configuration.get(0).equals("127.0.0.1"))
-			id = "127.0.0.1"+ ":" + clientPort;
+			clientId = "127.0.0.1" + ":" + clientPort;
 		else {
 			try {
-				
+
 				System.out.println("MY PORT IS: " + clientPort);
-				Enumeration<NetworkInterface> interfaces = NetworkInterface
-						.getNetworkInterfaces();
+				Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 				while (interfaces.hasMoreElements()) {
 					NetworkInterface iface = interfaces.nextElement();
 					// filtra interfaces inactivas, assim como o endereco
@@ -36,11 +35,10 @@ public class UserCode {
 					if (iface.isLoopback() || !iface.isUp())
 						continue;
 
-					Enumeration<InetAddress> addresses = iface
-							.getInetAddresses();
+					Enumeration<InetAddress> addresses = iface.getInetAddresses();
 					while (addresses.hasMoreElements()) {
 						InetAddress addr = addresses.nextElement();
-						id = addr.getHostAddress() + ":" + clientPort;
+						clientId = addr.getHostAddress() + ":" + clientPort;
 					}
 				}
 			} catch (SocketException e) {
@@ -52,15 +50,13 @@ public class UserCode {
 	public void run() {
 		String primary = new Configuration().getReplicas().get(0);
 		int primaryPort = new Configuration().getReplicasPort();
-		Request request = new Request("teste", id, requestNumber);
+		Request request = new Request("teste", clientId, requestNumber);
 		sr.send(request, primary, primaryPort);
-		System.out
-				.println("Request successfully sent! Waiting for the upercase string conversion...");
-		
+		System.out.println("Request successfully sent! Waiting for the upercase string conversion...");
+
 		Reply reply = (Reply) sr.receive();
-		System.out.println("The operation '" + request.getOperation()
-				+ "' was successfully converted to '" + reply.getOperation()
-				+ "'.");
+		System.out.println("The operation '" + request.getOperation() + "' was successfully converted to '"
+				+ reply.getOperation() + "'.");
 		requestNumber++;
 	}
 
