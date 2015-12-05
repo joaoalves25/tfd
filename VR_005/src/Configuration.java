@@ -29,8 +29,9 @@ public class Configuration {
 					}
 				}
 				if (line.equals("SERVERS_PORT")) {
-					line = file.readLine();
-					replicaPort = Integer.parseInt(line);
+					while ((line = file.readLine()) != null){
+						replicaPort = Integer.parseInt(line);
+					}
 				}
 //				if (line.equals("CLIENT_PORT")) {
 //					line = file.readLine();
