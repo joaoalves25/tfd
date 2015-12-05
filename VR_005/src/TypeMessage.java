@@ -3,5 +3,7 @@ public enum TypeMessage {
 	PREPARE,
 	PREPAREOK,
 	REPLY,
-	COMMIT;	
+	COMMIT,
+	STARTVIEWCHANGE,
+	DOVIEWCHANGE;
 }

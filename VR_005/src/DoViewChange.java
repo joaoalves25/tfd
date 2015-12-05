@@ -31,6 +31,7 @@ public class DoViewChange extends Message {
 		this.myV = myV;
 		this.commitNumber = commitNumber;
 		this.replicaNumber = i;
+		
 	}
 
 	/**

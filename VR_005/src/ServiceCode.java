@@ -30,6 +30,8 @@ public class ServiceCode {
 	private String primary;
 	private int replicasPort;
 	private SendAndReceive sr;
+	private int totalReplicas;
+	private int toleratedF;
 
 	public ServiceCode() throws UnknownHostException, SocketException {
 		configuration = new Configuration().getReplicas();
@@ -40,6 +42,7 @@ public class ServiceCode {
 		log = new HashMap<>();
 		commitNumber = opNumber;
 		client_table = new HashMap<>();
+		toleratedF = (configuration.size() -1) / 2;
 		fPlusOne = (configuration.size() / 2) + 1;
 		myIP = "";
 		primary = new Configuration().getReplicas().get(0);
@@ -54,7 +57,7 @@ public class ServiceCode {
 				BufferedReader file = new BufferedReader(new FileReader(
 						"Configuration.txt"));
 				String line;
-				int totalReplicas = 0;
+				totalReplicas = 0;
 				while ((line = file.readLine()) != null) {
 					sb.append(line + "\n");
 					totalReplicas++;
@@ -184,6 +187,8 @@ public class ServiceCode {
 	}
 
 	public void run() {
+		
+		System.out.println("I TOLERATE F: "+ toleratedF);
 		Timer timer = null;
 		if (replicaNumber == 0)
 			System.out
@@ -202,47 +207,54 @@ public class ServiceCode {
 						viewNumber, commitNumber), sr), 10000);
 			}
 			Message message = sr.receive();
-			if (replicaNumber == 0) {
-				timer.cancel();
-				// sou o primeiro e recebi uma mensagem.
-				Request request = (Request) message;
-				System.out
-						.println("New request received. Operation to be executed: '"
-								+ request.getOperation() + "'.");
+			if (replicaNumber == 0) { // PRIMARY 
+				switch (message.getTypeMessage()) {
+				case REQUEST:
+					timer.cancel();
+					// sou o primeiro e recebi uma mensagem.
+					Request request = (Request) message;
+					System.out
+							.println("New request received. Operation to be executed: '"
+									+ request.getOperation() + "'.");
 
-				// primeira vez do cliente (nao existe na client_table)
-				if (!client_table.containsKey(request.getClientId())) {
-					leaderSend(request);
-
-				} else { // Mais de um pedido para o mesmo cliente
-
-					if (request.getNumber() > client_table.get(
-							request.getClientId()).getFirst()) { // request_number
-																	// eh mais
-																	// recente
+					// primeira vez do cliente (nao existe na client_table)
+					if (!client_table.containsKey(request.getClientId())) {
 						leaderSend(request);
 
-					} else if (request.getNumber() == client_table.get(
-							request.getClientId()).getFirst()
-							&& !client_table.get(request.getClientId())
-									.getSecond().isEmpty()) {
-						System.out.println("Resending last reply...");
-						sr.send(new Reply(TypeMessage.REPLY, viewNumber,
-								request.getNumber(), client_table.get(
-										request.getClientId()).getSecond()),
-								request.getClientId().split(":")[0], Integer
-										.parseInt(request.getClientId().split(
-												":")[1]));
-					} else {
-						System.out.println("Duplicated message received!");
-						// message dropped
-					}
-				}
+					} else { // Mais de um pedido para o mesmo cliente
 
+						if (request.getNumber() > client_table.get(
+								request.getClientId()).getFirst()) { // request_number
+																		// eh mais
+																		// recente
+							leaderSend(request);
+
+						} else if (request.getNumber() == client_table.get(
+								request.getClientId()).getFirst()
+								&& !client_table.get(request.getClientId())
+										.getSecond().isEmpty()) {
+							System.out.println("Resending last reply...");
+							sr.send(new Reply(TypeMessage.REPLY, viewNumber,
+									request.getNumber(), client_table.get(
+											request.getClientId()).getSecond()),
+									request.getClientId().split(":")[0], Integer
+											.parseInt(request.getClientId().split(
+													":")[1]));
+						} else {
+							System.out.println("Duplicated message received!");
+							// message dropped
+						}
+					}
+					break;
+				default:
+					System.err.println("ERROR: DON'T RECOGNIZE THIS TYPE OF MESSAGE!");
+					break;
+				}
+				
 			} else { // CODIGO DAS REPLICAS
-				if (!message.getTypeMessage().equals(TypeMessage.REQUEST)
-						&& status.equals(Status.NORMAL)) {
-					if (message.getTypeMessage().equals(TypeMessage.COMMIT)) {
+				if (status.equals(Status.NORMAL)){
+					switch(message.getTypeMessage()){
+					case COMMIT:
 						Commit commit = (Commit) message;
 						if (opNumber < commit.getCommitNumber()) {
 							// wait for the request
@@ -260,7 +272,8 @@ public class ServiceCode {
 						System.out.println("Client Table = "
 								+ client_table.toString());
 						System.out.println("Log = "+log.toString());
-					} else {
+						break;
+					case PREPARE:
 
 						Prepare prepare = (Prepare) message;
 
@@ -317,7 +330,17 @@ public class ServiceCode {
 							// esta replica nao tem todos os pedidos!!!
 							// esperar ate ter todos!!!! recuperacao!!!
 						}
+						break;
+					case STARTVIEWCHANGE:
+
+						break;
+					default:
+						System.err.println("ERROR: DON'T RECOGNIZE THIS TYPE OF MESSAGE!");
+						break;
 					}
+					
+				}else{ // STATUS != NORMAL
+					
 				}
 			}
 		}
