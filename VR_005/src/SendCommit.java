@@ -17,14 +17,17 @@ public class SendCommit extends TimerTask {
 	public void run() {
 		System.out
 				.println("Client timed out! Sending COMMIT message to all backups...");
-		List<String> configuration = new Configuration().getReplicas();
-		for (int i = 0; i < configuration.size(); i++)
-			if (configuration.get(0).equals("127.0.0.1"))
-				sr.send(commit, "127.0.0.1",
-						new Configuration().getReplicasPort().get(i));
-			else
-				sr.send(commit, configuration.get(i),
-						new Configuration().getReplicasPort().get(0));
+		Configuration conf = new Configuration();
+		List<String> replicasList = conf.getReplicas();
+		for (int i = 0; i < replicasList.size(); i++)
+			if (myPort != conf.getReplicasPort().get(i)){
+				if (replicasList.get(0).equals("127.0.0.1"))
+					sr.send(commit, "127.0.0.1",
+							new Configuration().getReplicasPort().get(i));
+				else
+					sr.send(commit, replicasList.get(i),
+							new Configuration().getReplicasPort().get(0));
+			}
 	}
 
 }

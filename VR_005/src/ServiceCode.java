@@ -79,8 +79,6 @@ public class ServiceCode {
 				
 				if (replicaNumber < totalReplicas-1)
 					sb.append(myPort+1);
-				else
-					sb.setLength(sb.length() - 11);
 
 				FileOutputStream fileOut;
 				fileOut = new FileOutputStream("Configuration.txt");
@@ -249,7 +247,7 @@ public class ServiceCode {
 						}
 					}
 					timer = new Timer();
-					timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, viewNumber, commitNumber), sr),
+					timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, viewNumber, commitNumber), sr, myPort),
 							CLIENT_TIMETOUT);
 					firstTime = true;
 					break;
