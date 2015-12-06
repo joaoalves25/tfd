@@ -8,7 +8,7 @@ import java.util.List;
 public class Configuration {
 	private List<String> replicas;
 	private int clientPort;
-	private int replicaPort;
+	private List<Integer> replicasPort;
 
 	/*
 	 * Inicializa as variaveis com os valores retornados do ficheiro
@@ -16,6 +16,7 @@ public class Configuration {
 	 */
 	public Configuration() {
 		replicas = new ArrayList<>();
+		replicasPort = new ArrayList<>();
 		try {
 			BufferedReader file = new BufferedReader((new FileReader(
 					"Configuration.txt")));
@@ -30,13 +31,9 @@ public class Configuration {
 				}
 				if (line.equals("SERVERS_PORT")) {
 					while ((line = file.readLine()) != null){
-						replicaPort = Integer.parseInt(line);
+						replicasPort.add(Integer.parseInt(line));
 					}
 				}
-//				if (line.equals("CLIENT_PORT")) {
-//					line = file.readLine();
-//					clientPort = Integer.parseInt(line);
-//				}
 			}
 			file.close();
 		} catch (FileNotFoundException e) {
@@ -63,7 +60,7 @@ public class Configuration {
 	/*
 	 * Retorna o porto das replicas
 	 */
-	public int getReplicasPort() {
-		return replicaPort;
+	public List<Integer> getReplicasPort() {
+		return replicasPort;
 	}
 }

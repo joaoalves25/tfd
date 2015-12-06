@@ -49,7 +49,7 @@ public class UserCode {
 
 	public void run() {
 		String primary = new Configuration().getReplicas().get(0);
-		int primaryPort = new Configuration().getReplicasPort();
+		int primaryPort = new Configuration().getReplicasPort().get(0);
 		Request request = new Request("teste", clientId, requestNumber);
 		sr.send(request, primary, primaryPort);
 		System.out.println("Request successfully sent! Waiting for the upercase string conversion...");
