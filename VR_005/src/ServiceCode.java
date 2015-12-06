@@ -1,3 +1,4 @@
+import java.awt.TrayIcon.MessageType;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -195,6 +196,16 @@ public class ServiceCode {
 		System.out.println("Client Table = " + client_table.toString());
 		System.out.println("Log = " + log.toString());
 	}
+	
+	private void sendDoViewChange(int newView, int replicaToSend){
+		DoViewChange dvc = new DoViewChange(newView, log, viewNumber, opNumber, commitNumber, replicaNumber, TypeMessage.DOVIEWCHANGE);
+		System.out.println("REPLCIA TO SEND:"+replicaToSend );
+		for (String i : configuration)
+			System.out.println(i);
+		for (int j : replicasPort)
+			System.out.println(j);
+		sr.send(dvc,configuration.get(replicaToSend), replicasPort.get(replicaToSend));
+	}
 
 	public void run() {
 		Timer timer = null;
@@ -252,8 +263,17 @@ public class ServiceCode {
 					firstTime = true;
 					break;
 				case STARTVIEWCHANGE:
-					System.out.println("RECEBI UM STARTVIEWCAHNGE");
+					StartViewChange svc = (StartViewChange)  message;
 					
+					f--;
+					System.out.println("RECEBI UM STARTVIEWCAHNGE E O MEU F PASSOU PARA: "+ f);
+					if (f == 0){
+						sendDoViewChange(svc.getViewNumber(), svc.getReplicaNumber());
+					}else{
+						for (int i = 0; i < configuration.size(); i++)
+							if (!configuration.get(i).equals(configuration.get(svc.getReplicaNumber())) && !configuration.get(i).equals(myIP))
+								sr.send(svc, configuration.get(i), replicasPort.get(i));
+					}
 					break;
 				case DOVIEWCHANGE:
 					break;
