@@ -1,4 +1,3 @@
-import java.awt.TrayIcon.MessageType;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -21,6 +20,7 @@ public class ServiceCode {
 	private List<String> configuration;
 	private int replicaNumber;
 	private int viewNumber;
+	private int viewNumberNormal;
 	private Status status;
 	private Integer opNumber;
 	private Map<Integer, Request> log;
@@ -38,12 +38,14 @@ public class ServiceCode {
 	private final int CLIENT_TIMETOUT = 10000;
 	private final int PRIMARY_TIMEOUT = CLIENT_TIMETOUT * 2;
 	private boolean firstTime;
+	private List<DoViewChange> newChange; 
 
 	public ServiceCode() throws UnknownHostException, SocketException {
+		newChange = new ArrayList<>();
 		configuration = new Configuration().getReplicas();
 		totalReplicas = configuration.size();
 		replicaNumber = -1;
-		viewNumber = 0;
+		viewNumber = viewNumberNormal = 0;
 		status = Status.NORMAL;
 		opNumber = 0;
 		log = new HashMap<>();
@@ -118,7 +120,6 @@ public class ServiceCode {
 					replicaNumber = i;
 			
 			myPort = replicasPort.get(0);
-
 		}
 
 		switch (replicaNumber) {
@@ -139,16 +140,6 @@ public class ServiceCode {
 
 	private String executeOperation(String request) {
 		return request.toUpperCase();
-	}
-
-	private Map<Integer, Request> selectLog(ArrayList<DoViewChange> replicasLog) {
-		Map<Integer, Request> newLog = log;
-		for (int i = 0; i < replicasLog.size(); i++)
-			if (replicasLog.get(i).getReplicaViewNumber() > viewNumber)
-				if (replicasLog.get(i).getOpNumber() > opNumber)
-					newLog = replicasLog.get(i).getLog();
-
-		return newLog;
 	}
 
 	public void leaderSend(Request request) {
@@ -188,17 +179,15 @@ public class ServiceCode {
 			
 			sr.send(new Reply(TypeMessage.REPLY, viewNumber, request.getNumber(), client_table.get(
 					request.getClientId()).getSecond()), request.getClientId().split(":")[0],
-					Integer.parseInt(request.getClientId().split(":")[1]));
-			
-			
+					Integer.parseInt(request.getClientId().split(":")[1]));			
 		}
 
 		System.out.println("Client Table = " + client_table.toString());
 		System.out.println("Log = " + log.toString());
 	}
 	
-	private void sendDoViewChange(int newView, int replicaToSend){
-		DoViewChange dvc = new DoViewChange(newView, log, viewNumber, opNumber, commitNumber, replicaNumber, TypeMessage.DOVIEWCHANGE);
+	private void sendDoViewChange(int replicaToSend){
+		DoViewChange dvc = new DoViewChange( TypeMessage.DOVIEWCHANGE, viewNumber, log, viewNumberNormal, opNumber, commitNumber, replicaNumber);
 		System.out.println("REPLCIA TO SEND:"+replicaToSend );
 		for (String i : configuration)
 			System.out.println(i);
@@ -207,7 +196,26 @@ public class ServiceCode {
 		sr.send(dvc,configuration.get(replicaToSend), replicasPort.get(replicaToSend));
 	}
 
+	private void newPrimary(){
+		
+		viewNumber = newChange.get(0).getViewNumber();
+		for (DoViewChange dvcAux : newChange){
+			if (dvcAux.getViewNumberNormal() > viewNumberNormal)
+				log = dvcAux.getLog();
+			else if (dvcAux.getViewNumberNormal() == viewNumberNormal)
+				if (dvcAux.getOpNumber() > opNumber)
+					log = dvcAux.getLog();
+			if (dvcAux.getCommitNumber() > commitNumber)
+				commitNumber = dvcAux.getCommitNumber();
+		}
+		opNumber = log.size();
+		status = Status.NORMAL;
+		primary = true;
+		
+	}
+	
 	public void run() {
+		int counter = 0;
 		Timer timer = null;
 		if (primary)
 			System.out.println("I'm the PRIMARY server. All replicas must obey to my commands!");
@@ -229,8 +237,6 @@ public class ServiceCode {
 						timer.cancel();
 						timer.purge();
 					}
-					
-					
 					// sou o primeiro e recebi uma mensagem.
 					Request request = (Request) message;
 					System.out.println("New request received. Operation to be executed: '" + request.getOperation()
@@ -264,18 +270,19 @@ public class ServiceCode {
 					break;
 				case STARTVIEWCHANGE:
 					StartViewChange svc = (StartViewChange)  message;
-					
-					f--;
+					counter++;
 					System.out.println("RECEBI UM STARTVIEWCAHNGE E O MEU F PASSOU PARA: "+ f);
-					if (f == 0){
-						sendDoViewChange(svc.getViewNumber(), svc.getReplicaNumber());
-					}else{
+					if (counter == f){ //faz doViewChange para quem iniciou o StartViewChange 
+						counter = 0; 
+						sendDoViewChange(svc.getReplicaNumber());
+					}else{ //envia o startViewChange para as outras replicas
 						for (int i = 0; i < configuration.size(); i++)
 							if (!configuration.get(i).equals(configuration.get(svc.getReplicaNumber())) && !configuration.get(i).equals(myIP))
 								sr.send(svc, configuration.get(i), replicasPort.get(i));
 					}
 					break;
 				case DOVIEWCHANGE:
+					
 					break;
 				case COMMIT:
 					break;
@@ -359,6 +366,11 @@ public class ServiceCode {
 						System.out.println("RECEBI");
 						break;
 					case DOVIEWCHANGE:
+						DoViewChange auxDVC = (DoViewChange) message;
+						newChange.add(auxDVC);
+						if (newChange.size() == fPlusOne){
+							 newPrimary();
+						}
 						break;
 					default:
 						System.err.println("ERROR: THIS TYPE OF MESSAGE IS NOT RECOGNIZED!");

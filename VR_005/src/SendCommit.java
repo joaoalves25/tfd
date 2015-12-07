@@ -28,6 +28,7 @@ public class SendCommit extends TimerTask {
 					sr.send(commit, replicasList.get(i),
 							new Configuration().getReplicasPort().get(0));
 			}
+		
 	}
 
 }
