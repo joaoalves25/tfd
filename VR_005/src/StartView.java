@@ -1,34 +1,24 @@
 import java.util.Map;
 
-/**
- * 
- */
-
-/**
- * @author joaoalves
- *
- */
 public class StartView extends Message {
 
-	private int v;
+	private static final long serialVersionUID = 5283424956703623855L;
+	private int viewNumber;
 	private Map<Integer,Request> log;
-	private int n;
-	private int k;
-	private TypeMessage typemsg;
+	private int opNumber;
+	private int commitNumber;
 	
-	/**
-	 * @param typemsg
-	 */
-	public StartView(TypeMessage typemsg, int v, Map<Integer,Request> log, int n, int k) {
+	
+	public StartView(TypeMessage typemsg, int viewNumber, Map<Integer,Request> log, int opNumber, int commitNumber) {
 		super(typemsg);
-		this.v = v;
+		this.viewNumber = viewNumber;
 		this.log = log;
-		this.n = n;
-		this.k = k;
+		this.opNumber = opNumber;
+		this.commitNumber = commitNumber;
 	}
 
 	public int getView() {
-		return v;
+		return viewNumber;
 	}
 
 	public Map<Integer, Request> getLog() {
@@ -36,10 +26,12 @@ public class StartView extends Message {
 	}
 
 	public int getOp() {
-		return n;
+		return opNumber;
 	}
 
-	public TypeMessage getTypemsg() {
-		return typemsg;
+	@Override
+	public String toString() {
+		return "StartView [viewNumber=" + viewNumber + ", log=" + log + ", opNumber=" + opNumber + ", commitNumber="
+				+ commitNumber + "]";
 	}
 }

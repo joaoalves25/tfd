@@ -24,4 +24,11 @@ public class Reply extends Message {
 	public String getOperation() {
 		return operation;
 	}
+
+	@Override
+	public String toString() {
+		return "Reply [viewNumber=" + viewNumber + ", requestNumber=" + requestNumber + ", operation=" + operation
+				+ "]";
+	}
+	
 }

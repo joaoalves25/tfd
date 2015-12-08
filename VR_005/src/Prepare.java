@@ -30,4 +30,10 @@ public class Prepare extends Message {
 	public int getCommitNumber() {
 		return commitNumber;
 	}
+
+	@Override
+	public String toString() {
+		return "Prepare [viewNumber=" + viewNumber + ", request=" + request + ", opNumber=" + opNumber + ", commitNumber="
+				+ commitNumber + "]";
+	}
 }

@@ -17,4 +17,9 @@ public class StartViewChange extends Message {
 	public int getReplicaNumber() {
 		return replicaNumber;
 	}
+	
+	@Override
+	public String toString() {
+		return "StartViewChange [viewNumber=" + viewNumber + ", replicaNumber=" + replicaNumber + "]";
+	}
 }

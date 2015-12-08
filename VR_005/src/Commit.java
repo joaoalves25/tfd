@@ -17,4 +17,9 @@ public class Commit extends Message {
 	public int getCommitNumber() {
 		return commitNumber;
 	}
+
+	@Override
+	public String toString() {
+		return "Commit [viewNumber=" + viewNumber + ", commitNumber=" + commitNumber + "]";
+	}
 }

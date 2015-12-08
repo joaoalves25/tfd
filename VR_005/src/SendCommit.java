@@ -26,12 +26,12 @@ public class SendCommit extends TimerTask{
 	
 	public void run() {
 		
-		
+	/*	
 		if(print.equals("VAI COMÇAR A DANÇA DO CREU")){
 			timer.cancel();
 			timer.purge();
 		}
-		
+		*/
 	
 		System.out.println(print);
 		
@@ -42,15 +42,10 @@ public class SendCommit extends TimerTask{
 			if (myPort != replicasPort.get(i)) {
 				sr.send(commit, replicasList.get(i), replicasPort.get(i));
 			}
-<<<<<<< HEAD
-=======
-		
-	}
->>>>>>> fc40373_version
 
-		timer = new Timer();
+	/*	timer = new Timer();
 		timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, commit.getViewNumber(), commit.getCommitNumber()),
-				sr, myPort, CLIENT_TIMETOUT, "COMMIT Message sent to all replicas. Vim do SendCommit"), CLIENT_TIMETOUT);
+				sr, myPort, CLIENT_TIMETOUT, "COMMIT Message sent to all replicas. Vim do SendCommit"), CLIENT_TIMETOUT);*/
 		
 		
 		

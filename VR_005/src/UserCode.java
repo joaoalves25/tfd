@@ -60,10 +60,19 @@ public class UserCode {
 		System.out.println("Request successfully sent! Waiting for the upercase string conversion...");
 
 		Reply reply = (Reply) sr.receive();
+		
+		System.out.println("\nReply received:\n"+reply.toString()+"\n");
+		
+		if(reply.getOperation().equals("recover")){
+			System.out.println("Client recover was successful!");
+			System.out.println("Request number before = "+ reply.getRequestNumber());
+			requestNumber = reply.getRequestNumber() + 2;
+			System.out.println("Request number after = "+requestNumber);
+		}else{	
 		System.out.println("The operation '" + request.getOperation() + "' was successfully converted to '"
 				+ reply.getOperation() + "'.");
-
-		requestNumber = request.getNumber() + 1;
+		requestNumber = request.getRequestNumber() + 1;
+		}
 	}
 
 	public void close() {

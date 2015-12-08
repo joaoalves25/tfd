@@ -1,4 +1,5 @@
 public class PrepareOK extends Message {
+
 	private static final long serialVersionUID = 1758496722307924811L;
 	private int viewNumber;
 	private int opNumber;
@@ -21,5 +22,11 @@ public class PrepareOK extends Message {
 
 	public int replicaNumber() {
 		return replicaNumber;
+	}
+
+	@Override
+	public String toString() {
+		return "PrepareOK [viewNumber=" + viewNumber + ", opNumber=" + opNumber + ", replicaNumber=" + replicaNumber
+				+ "]";
 	}
 }

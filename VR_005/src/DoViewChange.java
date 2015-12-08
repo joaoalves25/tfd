@@ -44,4 +44,11 @@ public class DoViewChange extends Message {
 	public int getCommitNumber() {
 		return commitNumber;
 	}
+
+	@Override
+	public String toString() {
+		return "DoViewChange [viewNumber=" + viewNumber + ", log=" + log + ", viewNumberNormal=" + viewNumberNormal
+				+ ", opNumber=" + opNumber + ", commitNumber=" + commitNumber + ", replicaNumber=" + replicaNumber + "]";
+	}
+	
 }

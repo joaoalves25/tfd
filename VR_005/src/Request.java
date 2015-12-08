@@ -1,14 +1,14 @@
 public class Request extends Message {
 
 	private static final long serialVersionUID = -2182436451813567442L;
-	private int number;
+	private int requestNumber;
 	private String operation;
 	private String clientId;
 	private boolean executed;
 
-	public Request(String operation, String clientId, int number) {
+	public Request(String operation, String clientId, int requestNumber) {
 		super(TypeMessage.REQUEST);
-		this.number = number;
+		this.requestNumber = requestNumber;
 		this.operation = operation;
 		this.clientId = clientId;
 		this.executed = false;
@@ -18,8 +18,8 @@ public class Request extends Message {
 		executed = true;
 	}
 
-	public int getNumber() {
-		return number;
+	public int getRequestNumber() {
+		return requestNumber;
 	}
 
 	public String getOperation() {
@@ -36,7 +36,8 @@ public class Request extends Message {
 
 	@Override
 	public String toString() {
-		return "Message Type = REQUEST\nOperation = " + operation + "\nClient ID = " + clientId + "\nRequest Number = "
-				+ Integer.toString(number) + "\n" + "Executed = " + executed;
+		return "Request [number=" + requestNumber + ", operation=" + operation + ", clientId=" + clientId
+				+ ", executed=" + executed + "]";
 	}
+
 }
