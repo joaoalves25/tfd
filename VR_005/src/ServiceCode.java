@@ -30,7 +30,7 @@ public class ServiceCode {
 	private int totalReplicas;
 	private int f;
 	private final int CLIENT_TIMETOUT = 1000000 * 200; // 10 sec
-	private final int PRIMARY_TIMEOUT = 1000 * 10;
+	private final int PRIMARY_TIMEOUT = 1000 * 10000;
 	private boolean firstTime;
 	private boolean local;
 	private String primaryAddress;
@@ -109,6 +109,20 @@ public class ServiceCode {
 		return -1;
 	}
 
+
+	private void toStringInfo(){
+		System.out.println("\n---------------------------------------");
+		System.out.println("INFORMATION:");
+		System.out.println("TABLE_CLIENT<CLIENT_ID;REQUEST_NUMBER:(RESULT)>: "+client_table.toString());
+		System.out.println("LOG<OP_NUMBER; REQUEST>: "+log.toString());
+		System.out.println("OPERATION NUMBER: "+opNumber);
+		System.out.println("COMMIT-NUMBER: "+commitNumber);
+		System.out.println("VIEW-NUMBER: "+viewNumber);
+		System.out.println("PRIMARY ADDRESS:"+primaryAddress);
+		System.out.println("PRIMARY PORT: "+primaryPort);
+		System.out.println("REPLICA NUMBER: "+replicaNumber);
+		System.out.println("---------------------------------------\n");
+	}
 	private String myIPAddress() {
 		String ipAddress = "";
 		try {
@@ -139,36 +153,7 @@ public class ServiceCode {
 		return request.toUpperCase();
 	}
 
-	public void primarySendToReplicas(Request request) {
-		opNumber++;
-		log.put(opNumber, request);
-		client_table.put(request.getClientId(), new Pair<>(request.getRequestNumber(), ""));
-
-//		if (stateTransferTest > 3) {
-//			// enviar para as replicas
-//			for (int i = 0; i < replicasList.size(); i++)
-//				if (myPort != replicasPort.get(i)) {
-//
-//					System.out.println("SENDING TO: " + replicasPort.get(i));
-//
-//					sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber), replicasList.get(i),
-//							replicasPort.get(i));
-//
-//				}
-//		} else {
-			for (int i = 0; i < replicasList.size(); i++){
-				if (myPort != replicasPort.get(i) ) {
-//&& i != 1
-					System.out.println("SENDING TO: " + replicasPort.get(i));
-
-					sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber), replicasList.get(i),
-							replicasPort.get(i));
-				}
-			}
-//		}
-
-		stateTransferTest++;
-
+	private void primaryReceiveReplicas(Request request){
 		List<PrepareOK> replicasOK = new ArrayList<>();
 		int counter = 1;
 
@@ -195,10 +180,50 @@ public class ServiceCode {
 
 		System.out.println("Client Table = " + client_table.toString());
 		System.out.println("Log = " + log.toString());
+		
+	}
+	public void primarySendToReplicas(Request request) {
+		opNumber++;
+		log.put(opNumber, request);
+		client_table.put(request.getClientId(), new Pair<>(request.getRequestNumber(), ""));
+
+		
+		/* STATE TRANSFER SIMULATION */
+//		if (stateTransferTest > 3) {
+//			// enviar para as replicas
+//			for (int i = 0; i < replicasList.size(); i++)
+//				if (myPort != replicasPort.get(i)) {
+//
+//					System.out.println("SENDING TO: " + replicasPort.get(i));
+//
+//					sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber), replicasList.get(i),
+//							replicasPort.get(i));
+//
+//				}
+//		} else {
+			for (int i = 0; i < replicasList.size(); i++){
+				if (myPort != replicasPort.get(i) ) {
+//&& i != 1
+					System.out.println("SENDING TO: " + replicasPort.get(i));
+
+					sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber), replicasList.get(i),
+							replicasPort.get(i));
+				}
+			}
+//		}
+
+		stateTransferTest++;
+		primaryReceiveReplicas(request);
 	}
 
 	
-	public void start() {
+	private void newPrimaryUpdate(){
+		if (commitNumber < opNumber){
+			
+		}
+	}
+	
+	public void run() {
 		int counter = 0;
 		Timer timer = null;
 		if (primary)
@@ -217,9 +242,10 @@ public class ServiceCode {
 				System.out.println("I'm the PRIMARY server. All replicas must obey to my commands!");
 				System.out.println("O MEU LOG: "+ log.toString());
 			}
+			toStringInfo();
 			Message message = sr.receive();
 
-			if (primary) {
+			if (primary) {							/* PRIMARY CODE! */
 				
 				switch (message.getTypeMessage()) {
 				case REQUEST:
@@ -291,7 +317,7 @@ public class ServiceCode {
 					System.err.println("ERROR: THIS TYPE OF MESSAGE IS NOT RECOGNIZED!");
 					break;
 				}
-			} else { // CODIGO DAS REPLICAS
+			} else { 										/* BACKUPS CODE */ 
 
 				switch (message.getTypeMessage()) {
 				case COMMIT:
@@ -317,7 +343,7 @@ public class ServiceCode {
 					timer.schedule(new SendViewChange(
 							new StartViewChange(TypeMessage.STARTVIEWCHANGE, viewNumber+1, calculatePrimary(viewNumber+1)), sr, replicaNumber, istartedViewChange=true), PRIMARY_TIMEOUT);
 					break;
-				case PREPARE:
+				case PREPARE:											/* PREPARE MESSAGE */
 					if (status.equals(Status.NORMAL)) {
 						timer.cancel();
 						timer.purge();
@@ -372,7 +398,7 @@ public class ServiceCode {
 						}
 					}
 					break;
-				case STARTVIEWCHANGE:
+				case STARTVIEWCHANGE:							/* STARTVIEWCHANGE MESSAGE */
 					StartViewChange svc = (StartViewChange) message;
 					if (istartedViewChange){
 						System.out.println("Enviei para mim para enviar aos outros!");
@@ -410,7 +436,7 @@ public class ServiceCode {
 						}
 					}
 					break;
-				case DOVIEWCHANGE:
+				case DOVIEWCHANGE:								/* DOVIEWCHANGE */
 					DoViewChange aux = (DoViewChange) message;
 					doViewChangeMessages.add(aux);
 					System.out.println("Im thew new Primary and i receive a DOVIEWCHANGE and now my counter is: "+doViewChangeMessages.size());
@@ -445,12 +471,15 @@ public class ServiceCode {
 									if (!replicasList.get(i).equals(myIP) && replicasPort.get(i) != myPort)
 										sr.send(sv, replicasList.get(i), replicasPort.get(i));
 								}
-									
 							primary = true;
+							newPrimaryUpdate();
+							primaryAddress = myIP;
+							primaryPort = myPort;
+							
 						}
 					}
 					break;
-				case STARTVIEW:
+				case STARTVIEW:									/* STARTVIEW */
 					StartView startView = (StartView) message;
 					
 					log = startView.getLog();
@@ -483,7 +512,7 @@ public class ServiceCode {
 					}
 					commitNumber = opNumber;
 					break;
-				case GETSTATE:
+				case GETSTATE:								/* GETSTATE */
 					GetState getstate = (GetState) message;
 					if (getstate.getViewNumber() == viewNumber && status.equals(Status.NORMAL)) {
 
@@ -500,7 +529,7 @@ public class ServiceCode {
 					}
 					break;
 
-				case NEWSTATE:
+				case NEWSTATE:								/* NEWSTATE */
 					NewState newstate = (NewState) message;
 					log.putAll(newstate.getLog());
 					viewNumber = newstate.getViewNumber();

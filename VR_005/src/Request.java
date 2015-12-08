@@ -36,7 +36,7 @@ public class Request extends Message {
 
 	@Override
 	public String toString() {
-		return "Request [number=" + requestNumber + ", operation=" + operation + ", clientId=" + clientId
+		return "Request [requestNumber=" + requestNumber + ", operation=" + operation + ", clientId=" + clientId
 				+ ", executed=" + executed + "]";
 	}
 
