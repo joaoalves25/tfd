@@ -42,6 +42,11 @@ public class SendCommit extends TimerTask{
 			if (myPort != replicasPort.get(i)) {
 				sr.send(commit, replicasList.get(i), replicasPort.get(i));
 			}
+<<<<<<< HEAD
+=======
+		
+	}
+>>>>>>> fc40373_version
 
 		timer = new Timer();
 		timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, commit.getViewNumber(), commit.getCommitNumber()),
