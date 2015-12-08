@@ -12,11 +12,13 @@ public class UserCode {
 	private SendAndReceive sr;
 	private String primary;
 	private int primaryPort;
+	private List<String> replicasList;
+	private List<Integer> replicasPort;
 
 	public UserCode(int clientPort) {
 		Configuration configuration = new Configuration();
-		List<String> replicasList = configuration.getReplicas();
-		List<Integer> replicasPort = configuration.getReplicasPort();
+		replicasList = configuration.getReplicas();
+		replicasPort = configuration.getReplicasPort();
 		primary = replicasList.get(0);
 		primaryPort = replicasPort.get(0);
 		requestNumber = 1;
@@ -54,6 +56,7 @@ public class UserCode {
 	}
 
 	public void run() {
+		
 		Request request = new Request("teste", clientId, requestNumber);
 		
 		sr.send(request, primary, primaryPort);
@@ -73,6 +76,9 @@ public class UserCode {
 				+ reply.getOperation() + "'.");
 		requestNumber = request.getRequestNumber() + 1;
 		}
+		
+		primary = replicasList.get(reply.getViewNumber() % replicasList.size());
+		primaryPort = replicasPort.get(reply.getViewNumber() % replicasList.size());
 	}
 
 	public void close() {
