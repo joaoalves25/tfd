@@ -1,9 +1,3 @@
-import java.awt.TrayIcon.MessageType;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -18,7 +12,7 @@ import java.util.Timer;
 
 public class ServiceCode {
 
-	private List<String> configuration;
+	private List<String> replicasList;
 	private int replicaNumber;
 	private int viewNumber;
 	private Status status;
@@ -28,113 +22,94 @@ public class ServiceCode {
 	private Map<String, Pair<Integer, String>> client_table;
 	private int fPlusOne;
 	private String myIP;
-	private String primaryAddress;
 	private List<Integer> replicasPort;
 	private int myPort;
 	private SendAndReceive sr;
 	private boolean primary;
 	private int totalReplicas;
 	private int f;
-	private final int CLIENT_TIMETOUT = 10000;
+	private final int CLIENT_TIMETOUT = 5000; // 20 sec
 	private final int PRIMARY_TIMEOUT = CLIENT_TIMETOUT * 2;
 	private boolean firstTime;
+	private boolean local;
+	private String primaryAddress;
+	private int primaryPort;
 
-	public ServiceCode() throws UnknownHostException, SocketException {
-		configuration = new Configuration().getReplicas();
-		totalReplicas = configuration.size();
-		replicaNumber = -1;
+	public ServiceCode(String argsPort) throws UnknownHostException, SocketException {
+		Configuration configuration = new Configuration();
 		viewNumber = 0;
 		status = Status.NORMAL;
 		opNumber = 0;
 		log = new HashMap<>();
 		commitNumber = opNumber;
 		client_table = new HashMap<>();
-		f = (totalReplicas - 1) / 2;
-		fPlusOne = f + 1;
-		myIP = "";
-
 		firstTime = false;
-		
-		primaryAddress = configuration.get(0);
-		replicasPort = new Configuration().getReplicasPort();
-		
+		replicasList = configuration.getReplicas();
+		replicasPort = configuration.getReplicasPort();
+		totalReplicas = replicasList.size();
+		local = replicasList.get(0).equals("127.0.0.1");
 
-		if (configuration.get(0).equals("127.0.0.1")) {
+		if (local) {
 			myIP = "127.0.0.1";
-			StringBuilder sb = new StringBuilder();
-
-			try {
-				BufferedReader file = new BufferedReader(new FileReader("Configuration.txt"));
-				String line;
-				while ((line = file.readLine()) != null) {
-					sb.append(line + "\n");
-					if (line.equals("SERVERS_PORT")) {
-						while ((line = file.readLine()) != null) {
-							replicaNumber++;
-							sb.append(line + "\n");
-						}
-					}
-				}
-				file.close();
-				myPort = replicasPort.get(replicaNumber);
-				
-				if (replicaNumber < totalReplicas-1)
-					sb.append(myPort+1);
-
-				FileOutputStream fileOut;
-				fileOut = new FileOutputStream("Configuration.txt");
-				fileOut.write(sb.toString().getBytes());
-				fileOut.close();
-
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
+			replicaNumber = myReplicaNumber(Integer.parseInt(argsPort));
 		} else {
-
-			try {
-				Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-				while (interfaces.hasMoreElements()) {
-					NetworkInterface iface = interfaces.nextElement();
-					// filtra interfaces inactivas, assim como o endereco
-					// 127.0.0.1
-					if (iface.isLoopback() || !iface.isUp())
-						continue;
-
-					Enumeration<InetAddress> addresses = iface.getInetAddresses();
-					while (addresses.hasMoreElements()) {
-						InetAddress addr = addresses.nextElement();
-						myIP = addr.getHostAddress();
-					}
-				}
-			} catch (SocketException e) {
-				throw new RuntimeException(e);
-			}
-
-			for (int i = 0; i < configuration.size(); i++)
-				if (myIP.equals(configuration.get(i)))
-					replicaNumber = i;
-			
-			myPort = replicasPort.get(0);
-
+			myIP = myIPAddress();
+			replicaNumber = myReplicaNumber(Integer.parseInt(argsPort));
 		}
 
-		switch (replicaNumber) {
-		case (0):
-			primary = true;
-			break;
-		case (-1):
+		if (replicaNumber == -1 || myIP == null) {
 			System.out.println("NOT A VALID REPLICA.");
 			System.exit(1);
-			break;
-		default:
-			primary = false;
-			break;
 		}
+
+		myPort = replicasPort.get(replicaNumber);
+
+		if (primary = replicasPort.get(0) == myPort) {
+			primaryAddress = myIP;
+			primaryPort = myPort;
+		} else {
+			primaryAddress = replicasList.get(0);
+			primaryPort = replicasPort.get(0);
+		}
+
+		f = (totalReplicas - 1) / 2;
+		fPlusOne = f + 1;
 		sr = new SendAndReceive(new DatagramSocket(myPort));
-		System.out.println("Viewstamp Replication System has started!");
+		System.out.println("Viewstamp Replication System has started in port " + myPort + ".");
+	}
+
+	private int myReplicaNumber(int givenPort) {
+		for (int i = 0; i < totalReplicas; i++)
+			if (replicasPort.get(i) == givenPort)
+				return i;
+
+		return -1;
+	}
+
+	private String myIPAddress() {
+		String ipAddress = "";
+		try {
+			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+			while (interfaces.hasMoreElements()) {
+				NetworkInterface iface = interfaces.nextElement();
+				// filtra interfaces inactivas, assim como o endereco
+				// 127.0.0.1
+				if (iface.isLoopback() || !iface.isUp())
+					continue;
+
+				Enumeration<InetAddress> addresses = iface.getInetAddresses();
+				while (addresses.hasMoreElements()) {
+					InetAddress addr = addresses.nextElement();
+					ipAddress = addr.getHostAddress();
+				}
+			}
+		} catch (SocketException e) {
+			throw new RuntimeException(e);
+		}
+		if (replicasList.contains(ipAddress))
+			return ipAddress;
+
+		return null;
 	}
 
 	private String executeOperation(String request) {
@@ -151,30 +126,26 @@ public class ServiceCode {
 		return newLog;
 	}
 
-	public void leaderSend(Request request) {
+	public void primarySendToReplicas(Request request) {
 		opNumber++;
 		log.put(opNumber, request);
 		client_table.put(request.getClientId(), new Pair<>(request.getNumber(), ""));
 		// enviar para as replicas
-		for (int i = 1; i < configuration.size(); i++)
-			if (configuration.get(0).equals("127.0.0.1"))
-				sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber),
-						configuration.get(i), myPort + i);
-			else
-				sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber),
-						configuration.get(i), replicasPort.get(0));
+		for (int i = 0; i < replicasList.size(); i++)
+			if(myPort != replicasPort.get(i))
+			sr.send(new Prepare(TypeMessage.PREPARE, viewNumber, request, opNumber, commitNumber), replicasList.get(i),
+					replicasPort.get(i));
 
 		List<PrepareOK> replicasOK = new ArrayList<>();
-		int counter = 1
-				;
-		System.out.println("FPLUSONE: "+(fPlusOne));
+		int counter = 1;
+
 		while (counter < fPlusOne) {
 			replicasOK.add((PrepareOK) sr.receive());
 			System.out.println("Replica " + replicasOK.get(replicasOK.size() - 1).replicaNumber() + " has answered");
 			counter++;
 		}
-		
-		System.out.println("COUNTER: "+ counter);
+
+		System.out.println("COUNTER: " + counter);
 		if (counter >= fPlusOne) {
 			commitNumber++;
 			client_table.put(request.getClientId(),
@@ -185,52 +156,48 @@ public class ServiceCode {
 
 			request.setExecuted();
 			log.put(opNumber, request);
-			
+
 			sr.send(new Reply(TypeMessage.REPLY, viewNumber, request.getNumber(), client_table.get(
 					request.getClientId()).getSecond()), request.getClientId().split(":")[0],
 					Integer.parseInt(request.getClientId().split(":")[1]));
-			
-			
+
 		}
 
 		System.out.println("Client Table = " + client_table.toString());
 		System.out.println("Log = " + log.toString());
-	}
-	
-	private void sendDoViewChange(int newView, int replicaToSend){
-		DoViewChange dvc = new DoViewChange(newView, log, viewNumber, opNumber, commitNumber, replicaNumber, TypeMessage.DOVIEWCHANGE);
-		System.out.println("REPLCIA TO SEND:"+replicaToSend );
-		for (String i : configuration)
-			System.out.println(i);
-		for (int j : replicasPort)
-			System.out.println(j);
-		sr.send(dvc,configuration.get(replicaToSend), replicasPort.get(replicaToSend));
 	}
 
 	public void run() {
 		Timer timer = null;
 		if (primary)
 			System.out.println("I'm the PRIMARY server. All replicas must obey to my commands!");
-		else{
+		else {
 			timer = new Timer();
 			System.out.println("Greetings traveler! I'm replica number " + replicaNumber);
-			timer.schedule(new SendViewChange(new StartViewChange(TypeMessage.STARTVIEWCHANGE, viewNumber, replicaNumber), sr), PRIMARY_TIMEOUT);
+			timer.schedule(new SendViewChange(new StartViewChange(TypeMessage.STARTVIEWCHANGE, viewNumber,
+					replicaNumber), sr), PRIMARY_TIMEOUT);
 		}
 		System.out.println("My IP address is: " + myIP);
 
 		while (true) {
+
 			Message message = sr.receive();
+			
+			
+			
+			
+			
 			if (primary) {
+
 				switch (message.getTypeMessage()) {
 				case REQUEST:
 					System.out.println("RECEBI DO CLIENTE");
-					if(firstTime){
+			/*		if (firstTime) {
 						System.out.println("VOU CANCERLAR");
 						timer.cancel();
 						timer.purge();
-					}
-					
-					
+					}*/
+
 					// sou o primeiro e recebi uma mensagem.
 					Request request = (Request) message;
 					System.out.println("New request received. Operation to be executed: '" + request.getOperation()
@@ -238,13 +205,13 @@ public class ServiceCode {
 
 					// primeira vez do cliente (nao existe na client_table)
 					if (!client_table.containsKey(request.getClientId())) {
-						leaderSend(request);
+						primarySendToReplicas(request);
 
 					} else { // Mais de um pedido para o mesmo cliente
 
 						// se o requestNumber for o mais recente
 						if (request.getNumber() > client_table.get(request.getClientId()).getFirst()) {
-							leaderSend(request);
+							primarySendToReplicas(request);
 
 						} else if (request.getNumber() == client_table.get(request.getClientId()).getFirst()
 								&& !client_table.get(request.getClientId()).getSecond().isEmpty()) {
@@ -257,45 +224,43 @@ public class ServiceCode {
 							// message dropped
 						}
 					}
-					timer = new Timer();
-					timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, viewNumber, commitNumber), sr, myPort),
-							CLIENT_TIMETOUT);
-					firstTime = true;
+					
+					
+					new SendCommit(new Commit(TypeMessage.COMMIT, viewNumber, commitNumber), sr, myPort,
+							CLIENT_TIMETOUT,"COMMIT Message sent to all replicas. Vim do ServiceCode").run();
+					
+					
+			/*		timer = new Timer();
+					timer.schedule(new SendCommit(new Commit(TypeMessage.COMMIT, viewNumber, commitNumber), sr, myPort,
+							CLIENT_TIMETOUT), CLIENT_TIMETOUT);
+					firstTime = true;*/
+					
 					break;
 				case STARTVIEWCHANGE:
-					StartViewChange svc = (StartViewChange)  message;
-					
-					f--;
-					System.out.println("RECEBI UM STARTVIEWCAHNGE E O MEU F PASSOU PARA: "+ f);
-					if (f == 0){
-						sendDoViewChange(svc.getViewNumber(), svc.getReplicaNumber());
-					}else{
-						for (int i = 0; i < configuration.size(); i++)
-							if (!configuration.get(i).equals(configuration.get(svc.getReplicaNumber())) && !configuration.get(i).equals(myIP))
-								sr.send(svc, configuration.get(i), replicasPort.get(i));
-					}
+					System.out.println("STARTVIEWCAHNGE Received");
+
 					break;
 				case DOVIEWCHANGE:
 					break;
 				case COMMIT:
 					break;
 				case PREPAREOK:
-					System.out.println("Thank you but i dont need you!");
+					System.out.println("PREPAREOK Received");
 					break;
 				default:
 					System.err.println("ERROR: THIS TYPE OF MESSAGE IS NOT RECOGNIZED!");
 					break;
 				}
 			} else { // CODIGO DAS REPLICAS
-				
+
 				if (status.equals(Status.NORMAL)) {
 					switch (message.getTypeMessage()) {
 					case COMMIT:
 						timer.cancel();
 						timer.purge();
 						Commit commit = (Commit) message;
-						System.out.println("MY COMMIT NUMBER: "+ commitNumber);
-						System.out.println("COMMIT NUMBER FROM MESSAGE: "+ commit.getCommitNumber());
+						System.out.println("MY COMMIT NUMBER: " + commitNumber);
+						System.out.println("COMMIT NUMBER FROM MESSAGE: " + commit.getCommitNumber());
 						if (opNumber < commit.getCommitNumber()) {
 							// wait for the request
 						}
@@ -306,16 +271,18 @@ public class ServiceCode {
 									.getNumber(), executeOperation(log.get(commitNumber).getOperation())));
 							log.get(commitNumber).setExecuted();
 							log.put(commitNumber, log.get(commitNumber));
-							
+
 						}
 						System.out.println("Client Table = " + client_table.toString());
 						System.out.println("Log = " + log.toString());
 						timer = new Timer();
-						timer.schedule(new SendViewChange(new StartViewChange(TypeMessage.STARTVIEWCHANGE, viewNumber, replicaNumber), sr), PRIMARY_TIMEOUT);
+						timer.schedule(new SendViewChange(new StartViewChange(TypeMessage.STARTVIEWCHANGE, viewNumber,
+								replicaNumber), sr), PRIMARY_TIMEOUT);
 						break;
 					case PREPARE:
+						timer.cancel();
+						timer.purge();
 						Prepare prepare = (Prepare) message;
-
 						// verifica se opnumber eh o seguinte
 						if (prepare.getOpNumber() == log.keySet().size() + 1) {
 							opNumber++;
@@ -345,12 +312,12 @@ public class ServiceCode {
 							System.out.println("Client Table = " + client_table.toString());
 							System.out.println("Log = " + log.toString());
 
-							if (configuration.get(0).equals("127.0.0.1"))
-								sr.send(new PrepareOK(TypeMessage.PREPAREOK, viewNumber, opNumber, replicaNumber),
-										primaryAddress, replicasPort.get(0));
-							else
-								sr.send(new PrepareOK(TypeMessage.PREPAREOK, viewNumber, opNumber, replicaNumber),
-										primaryAddress, replicasPort.get(0));
+							System.out.println("PRIMARY ADDRESS = " + primaryAddress + "\nPRIMARY PORT = "
+									+ primaryPort);
+							System.out.println(primary);
+
+							sr.send(new PrepareOK(TypeMessage.PREPAREOK, viewNumber, opNumber, replicaNumber),
+									primaryAddress, primaryPort);
 						} else {
 							// esta replica nao tem todos os pedidos!!!
 							// esperar ate ter todos!!!! recuperacao!!!

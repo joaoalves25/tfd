@@ -4,8 +4,7 @@ public class PrepareOK extends Message {
 	private int opNumber;
 	private int replicaNumber;
 
-	public PrepareOK(TypeMessage typemsg, int viewNumber, int opNumber,
-			int replicaNumber) {
+	public PrepareOK(TypeMessage typemsg, int viewNumber, int opNumber, int replicaNumber) {
 		super(typemsg);
 		this.viewNumber = viewNumber;
 		this.opNumber = opNumber;
