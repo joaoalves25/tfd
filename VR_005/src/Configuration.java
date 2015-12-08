@@ -9,6 +9,7 @@ public class Configuration {
 	private List<String> replicas;
 	private int clientPort;
 	private List<Integer> replicasPort;
+	private int f;
 
 	/*
 	 * Inicializa as variaveis com os valores retornados do ficheiro
@@ -17,6 +18,7 @@ public class Configuration {
 	public Configuration() {
 		replicas = new ArrayList<>();
 		replicasPort = new ArrayList<>();
+		f = 3;
 		try {
 			BufferedReader file = new BufferedReader((new FileReader(
 					"Configuration.txt")));
@@ -62,5 +64,9 @@ public class Configuration {
 	 */
 	public List<Integer> getReplicasPort() {
 		return replicasPort;
+	}
+	
+	public int getF(){
+		return f;
 	}
 }
